@@ -1,31 +1,41 @@
 # Data sources & provenance
 
 Every empirical and policy parameter in `finland-baseline.ts` references a key
-in this file. The rule: **no number without a traceable source and a plausible
-range.** P0 values are stylized placeholders; the keys below are stubs to be
-filled with proper citations in P1–P2.
+below. The rule: **no number without a traceable source and a plausible range.**
+Ranges are deliberate — `empirical` ranges encode measurement uncertainty,
+`policy` ranges encode the span of the live debate (a lever you set), and
+`identity` values are exact accounting must-holds.
 
-| key | parameter | status | intended source |
-|-----|-----------|--------|-----------------|
-| `TODO-gdp` | real output total | placeholder | Statistics Finland — national accounts / GDP |
-| `TODO-energy-mix` | primary energy shares | placeholder | Statistics Finland energy statistics / Eurostat |
-| `TODO-eroi` | energy return on investment | placeholder | literature (Hall et al.); range, not point |
-| `TODO-wage-share` | labor share of output | placeholder | OECD / Statistics Finland national accounts |
-| `TODO-dispersion` | within-labor pay spread | placeholder | OECD earnings dispersion (D9/D1) |
-| `TODO-tax-rate` | effective average tax rate | placeholder | VATT / OECD tax database |
-| `TODO-social-wage` | in-kind vs cash split | placeholder | OECD social expenditure (SOCX) |
-| `TODO-housing` | housing cost burden | placeholder | Eurostat SILC (housing cost overburden) |
+| key | parameter | central figure used | source |
+|-----|-----------|---------------------|--------|
+| `statfi-gdp` | real output (per-capita scaled) | GDP ≈ €270 bn / 5.6 m ≈ €48k pc | [Statistics Finland — national accounts](https://stat.fi/en/statistics/vtp) |
+| `statfi-energy` | primary energy shares | renewables **42%** of total energy consumption, 2023 | [Statistics Finland — energy supply 2023](https://stat.fi/en/publication/cln32y7ve5mem0bvzcoduq5xx) |
+| `eroi-lit` | energy return on investment | range 8–14 (society-wide) | Hall, Lambert & Balogh (2014), *Energy Policy* — literature range |
+| `oecd-labour-share` | labour share of output | adjusted labour share ≈ 0.57–0.60 | [OECD compendium of productivity indicators 2025](https://www.oecd.org/en/publications/oecd-compendium-of-productivity-indicators-2025_b024d9e1-en.html) |
+| `oecd-earnings-disp` | within-labour pay spread | Finland earnings D9/D1 ≈ 2.5 (low) | OECD Earnings distribution database |
+| `statfi-wealth` | capital/wealth concentration | top-10% own **52%** of net wealth, 2023 | [Statistics Finland — households' assets 2023](https://stat.fi/en/publication/cm1hek7m45vlf07vxdwvayu3c) |
+| `oecd-tax` | tax level | total tax ≈ **43%** of GDP | [OECD — tax revenue, Finland](https://data.oecd.org/tax/tax-revenue.htm) |
+| `vero-capital` | capital income tax rate | 30% up to €30k, 34% above | Finnish Tax Administration (Vero) |
+| `oecd-socx` | in-kind vs cash split | SOCX in-kind ≈ half of social spending | OECD Social Expenditure database (SOCX) |
+| `eurostat-housing` | housing cost burden | overburden (>40%) rate **2.6%**, 2023 | [Eurostat — housing conditions](https://ec.europa.eu/eurostat/statistics-explained/index.php?title=Living_conditions_in_Europe_-_housing) |
+| `kela-pension` | pension transfer | full national+earnings pension band | Kela / Finnish Centre for Pensions |
+| `kela-unemp` | unemployment benefit | basic + earnings-related band | Kela |
+| `kela-study` | study grant | study grant + housing supplement | Kela |
+| `kela-child` | child benefit | ~€95–170/month per child | Kela |
 
-## Conventions
+## Calibration anchors (validation targets, not inputs)
 
-- **`kind: empirical`** → range encodes *measurement uncertainty*; eligible for
-  uncertainty bands on time-series/compare views.
-- **`kind: policy`** → range encodes the *span of the live debate*; this is a
-  user-set lever, not uncertainty. Never folded into the same Monte-Carlo draw.
-- **`kind: identity`** → exact; accounting must-hold.
+- **Equivalised disposable-income Gini ≈ 0.266** (Eurostat, 2023). The model
+  reports `disposableGini` (adults, un-equivalised in P1) as the comparable figure.
+- **Top-10% net wealth share ≈ 52%** (Statistics Finland, 2023) — target for the
+  wealth proxy once P3 adds real accumulation dynamics.
 
-## Known caveats (to keep the methodology honest)
+## Known caveats (kept visible, not hidden)
 
+- P1 does **not** equivalise income by household, so `disposableGini` runs a few
+  points above the Eurostat figure; it is a calibration guide, not a published claim.
 - Independent sampling across empirical ranges can produce incoherent worlds
-  (e.g. high union density paired with high wage dispersion). Correlation
-  structure is out of scope for the first uncertainty pass — documented, not hidden.
+  (e.g. high union density with high wage dispersion). Correlation structure is
+  out of scope for the first uncertainty pass — documented, not assumed away.
+- The wealth metric is a crude proxy until P3; treat top-share figures as
+  illustrative for now.

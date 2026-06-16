@@ -82,10 +82,33 @@ export interface PhysicalState {
 }
 
 export interface Metrics {
+  /** Gini of capability (the headline real-welfare metric). */
   gini: number;
+  /** Gini of pre-tax, pre-transfer (market) income — before secondary distribution acts. */
+  marketGini: number;
+  /** Gini of disposable income (after tax + transfers), un-equivalised. Sits above the
+   *  household-equivalised Eurostat figure (~0.27); the gap demonstrates what redistribution does. */
+  disposableGini: number;
   top1WealthShare: number;
   top10WealthShare: number;
   medianCapability: number;
+  /** Realized average effective tax rate on factor income, for display. */
+  avgEffectiveTaxRate: number;
+}
+
+/** One step in the "where did your income come from?" decomposition. */
+export interface DecompositionItem {
+  label: string;
+  /** Signed contribution to capability (€). Negative for tax/housing. */
+  delta: number;
+  kind: 'gross' | 'tax' | 'transfer' | 'social' | 'housing';
+}
+
+export interface Decomposition {
+  citizenClass: CitizenClass;
+  grossIncome: number;
+  items: DecompositionItem[];
+  capability: number;
 }
 
 export interface YearState {
@@ -94,6 +117,8 @@ export interface YearState {
   flows: { money: SankeyLink[]; physical: SankeyLink[] };
   citizens: Citizen[];
   metrics: Metrics;
+  /** Income decomposition for a representative median worker (the headline graphic). */
+  representative: Decomposition;
 }
 
 export interface SimResult {
@@ -109,17 +134,27 @@ export interface Params {
   population: number;
   classShares: Record<CitizenClass, number>;
 
-  // Physical layer (stubbed in P0, fleshed out in P2).
-  realOutput: Param; // total annual real output, €
+  // Physical layer (stubbed in P0/P1, fleshed out in P2).
+  realOutput: Param; // total annual real output, € (scaled to GDP-per-capita × population)
   energyMix: Record<string, Param>; // shares by source, should sum to ~1
   eroi: Param;
 
   // Distribution layer.
-  wageShare: Param; // fraction of output flowing to labor
-  wageDispersion: Param; // spread of within-labor pay (lognormal sigma-ish)
+  wageShare: Param; // fraction of output flowing to labour
+  wageDispersion: Param; // lognormal sigma of within-labour pay
+  capitalDispersion: Param; // lognormal sigma of capital ownership (wider ⇒ more concentration)
 
-  // Fiscal layer (flat stub in P0; progressive in P1).
-  avgTaxRate: Param;
-  socialWageFraction: Param; // fraction of tax revenue returned as in-kind services
+  // Fiscal layer (progressive in P1).
+  taxLevel: Param; // policy multiplier scaling the whole progressive labour-tax schedule
+  capitalTaxRate: Param; // flat rate on capital income (Finland taxes capital income ~30–34%)
+  socialWageFraction: Param; // fraction of public budget delivered as in-kind services vs cash
   housingCostFraction: Param; // share of disposable income spent on housing
+
+  // Cash transfers (annual €, before means-testing — stylised flat amounts).
+  transfers: {
+    pension: Param;
+    unemployment: Param;
+    study: Param;
+    child: Param;
+  };
 }

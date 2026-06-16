@@ -1,8 +1,8 @@
 // data/finland-baseline.ts
-// Finland-anchored baseline parameters. Every empirical/policy value carries a
-// [low, high] range and a source key into sources.md. The operative value
-// defaults to the midpoint. These are P0 placeholders with plausible ranges;
-// P1 replaces the numbers with properly sourced figures (see sources.md TODOs).
+// Finland-anchored baseline. Incomes are scaled to ~GDP-per-capita euros so the
+// progressive tax brackets in fiscal.ts and the income waterfall read in real €.
+// Every empirical/policy value carries a [low, high] range and a source key into
+// sources.md. The operative value defaults to the midpoint.
 
 import type { Params } from '../engine/types';
 import { param } from '../engine/param';
@@ -10,7 +10,7 @@ import { param } from '../engine/param';
 export const FINLAND_BASELINE: Params = {
   population: 1000,
 
-  // Stylized class shares (sum ≈ 1). Refined against Statistics Finland in P1.
+  // Stylised class shares (sum ≈ 1). Refined against Statistics Finland later.
   classShares: {
     worker: 0.34,
     professional: 0.16,
@@ -23,39 +23,58 @@ export const FINLAND_BASELINE: Params = {
   },
 
   // --- Physical layer (stub until P2) ---
-  realOutput: param(250_000_000, 270_000_000, 'empirical', {
-    unit: '€/year (notional, scaled)',
-    source: 'TODO-gdp',
-    note: 'Notional total real output for 1000 synthetic citizens; rescaled in P2.',
+  // Finland GDP ≈ €270 bn / 5.6 m ≈ €48k per capita; scaled to 1000 citizens.
+  realOutput: param(46_000_000, 52_000_000, 'empirical', {
+    unit: '€/year (GDP per capita × 1000)',
+    source: 'statfi-gdp',
   }),
   energyMix: {
-    fossil: param(0.33, 0.43, 'empirical', { unit: 'share', source: 'TODO-energy-mix' }),
-    nuclear: param(0.2, 0.3, 'empirical', { unit: 'share', source: 'TODO-energy-mix' }),
-    renewable: param(0.3, 0.42, 'empirical', { unit: 'share', source: 'TODO-energy-mix' }),
+    // Total energy consumption 2023: renewables 42%; fossil+peat and nuclear make up the rest.
+    fossil: param(0.34, 0.42, 'empirical', { unit: 'share', source: 'statfi-energy' }),
+    nuclear: param(0.16, 0.22, 'empirical', { unit: 'share', source: 'statfi-energy' }),
+    renewable: param(0.4, 0.44, 'empirical', { unit: 'share', source: 'statfi-energy' }),
   },
-  eroi: param(8, 14, 'empirical', { unit: 'ratio', source: 'TODO-eroi' }),
+  eroi: param(8, 14, 'empirical', { unit: 'ratio', source: 'eroi-lit' }),
 
   // --- Distribution layer ---
-  wageShare: param(0.55, 0.62, 'empirical', {
-    unit: 'share of output to labor',
-    source: 'TODO-wage-share',
+  // Finnish adjusted labour share ≈ 0.57–0.60 of GDP; definition-sensitive, hence the range.
+  wageShare: param(0.55, 0.61, 'empirical', {
+    unit: 'share of output to labour',
+    source: 'oecd-labour-share',
   }),
-  wageDispersion: param(0.3, 0.7, 'policy', {
-    note: 'Lognormal sigma of within-labor pay; lower = more compressed (Nordic).',
-    source: 'TODO-dispersion',
+  wageDispersion: param(0.45, 0.75, 'policy', {
+    note: 'Lognormal sigma of within-labour pay; lower = compressed (Nordic). Calibrated so disposable Gini ≈ 0.27–0.32.',
+    source: 'oecd-earnings-disp',
+  }),
+  capitalDispersion: param(0.9, 1.4, 'empirical', {
+    note: 'Capital ownership is far more concentrated than wages; drives the top wealth share.',
+    source: 'statfi-wealth',
   }),
 
   // --- Fiscal layer ---
-  avgTaxRate: param(0.3, 0.45, 'policy', {
-    unit: 'effective average rate on factor income',
-    source: 'TODO-tax-rate',
+  taxLevel: param(0.9, 1.1, 'policy', {
+    note: 'Multiplier on the progressive labour-tax schedule (1.0 ≈ current Finland). Lower = low-tax society.',
+    source: 'oecd-tax',
   }),
-  socialWageFraction: param(0.4, 0.6, 'policy', {
-    note: 'Fraction of tax revenue delivered as in-kind public services vs cash transfers.',
-    source: 'TODO-social-wage',
+  capitalTaxRate: param(0.3, 0.34, 'policy', {
+    unit: 'flat rate on capital income',
+    source: 'vero-capital',
   }),
-  housingCostFraction: param(0.18, 0.3, 'empirical', {
+  socialWageFraction: param(0.45, 0.6, 'policy', {
+    note: 'Share of the public budget delivered as in-kind services (health, education, infrastructure) vs cash transfers.',
+    source: 'oecd-socx',
+  }),
+  housingCostFraction: param(0.18, 0.26, 'empirical', {
     unit: 'share of disposable income',
-    source: 'TODO-housing',
+    note: 'Mean housing-cost share; note Finland’s 40%-overburden rate is only ~2.6% (Eurostat 2023).',
+    source: 'eurostat-housing',
   }),
+
+  // --- Cash transfers (annual €, stylised flat amounts) ---
+  transfers: {
+    pension: param(16_000, 22_000, 'policy', { unit: '€/year', source: 'kela-pension' }),
+    unemployment: param(8_000, 13_000, 'policy', { unit: '€/year', source: 'kela-unemp' }),
+    study: param(4_000, 7_000, 'policy', { unit: '€/year', source: 'kela-study' }),
+    child: param(1_400, 2_200, 'policy', { unit: '€/year', source: 'kela-child' }),
+  },
 };

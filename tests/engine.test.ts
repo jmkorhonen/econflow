@@ -74,4 +74,33 @@ describe('runEconomy', () => {
     expect(r.years).toHaveLength(5);
     expect(r.years[4].year).toBe(2029);
   });
+
+  it('redistribution lowers inequality: disposable Gini < market Gini', () => {
+    const m = runEconomy({ seed: 11 }).years[0].metrics;
+    expect(m.disposableGini).toBeGreaterThan(0.2);
+    expect(m.disposableGini).toBeLessThan(0.55);
+    expect(m.disposableGini).toBeLessThan(m.marketGini);
+  });
+
+  it('the representative waterfall reconstructs capability', () => {
+    const d = runEconomy({ seed: 4 }).years[0].representative;
+    const sum = d.items.reduce((s, it) => s + it.delta, 0);
+    expect(sum).toBeCloseTo(d.capability, 2);
+  });
+
+  it('progressive tax: higher earners pay a higher effective rate', () => {
+    const cs = runEconomy({ seed: 6 }).years[0].citizens.filter((c) => c.laborIncome > 0);
+    const rate = (c: (typeof cs)[number]) => c.taxesPaid / (c.laborIncome + c.capitalIncome);
+    const sorted = [...cs].sort((a, b) => a.laborIncome - b.laborIncome);
+    const low = rate(sorted[Math.floor(sorted.length * 0.1)]);
+    const high = rate(sorted[Math.floor(sorted.length * 0.9)]);
+    expect(high).toBeGreaterThan(low);
+  });
+
+  it('the social wage lifts everyone equally (in-kind, per capita)', () => {
+    const cs = runEconomy({ seed: 8 }).years[0].citizens;
+    const first = cs[0].socialWageReceived;
+    expect(first).toBeGreaterThan(0);
+    expect(cs.every((c) => Math.abs(c.socialWageReceived - first) < 1e-6)).toBe(true);
+  });
 });
