@@ -35,7 +35,7 @@
   const year = $derived(runEconomy({ seed, params }).years[0]);
 
   // "You" — input your own income; runs through the same wedge, placed in the distribution.
-  let myWage = $state(38_000);
+  let myWage = $state(38_400); // €3,200 / month
   let myCapital = $state(0);
   let meEnabled = $state(false);
   const person = $derived(meEnabled ? evaluatePerson(year, params, myWage, myCapital) : null);
