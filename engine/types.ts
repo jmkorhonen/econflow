@@ -225,6 +225,35 @@ export interface SimResult {
   seed: number;
 }
 
+/** One year in a multi-decade dynamics run. */
+export interface DynSnapshot {
+  year: number;
+  disposableGini: number;
+  top1Wealth: number;
+  top10Wealth: number;
+  bottom50Wealth: number;
+  medianCapability: number;
+  output: number;
+  /** Policy state, which drifts when the capture loop is on. */
+  wageShare: number;
+  capitalTaxRate: number;
+  inheritanceTax: number;
+}
+
+export interface DynamicsResult {
+  snapshots: DynSnapshot[];
+  /** Did wealth concentration run away (top-10% share crossed a high threshold)? */
+  oligarchic: boolean;
+}
+
+export interface DynamicsOptions {
+  years?: number;
+  seed?: number;
+  /** Override the captured policy levers' starting values. */
+  captureStrength?: number;
+  inheritanceTax?: number;
+}
+
 /** Physical-economy parameters: energy, infrastructure, materials. */
 export interface PhysicalParams {
   primaryEnergyIndex: Param; // total primary energy per capita (1.0 = baseline)
@@ -282,4 +311,14 @@ export interface Params {
     study: Param;
     child: Param;
   };
+
+  // Long-run dynamics (P4): wealth accumulation, inheritance, political capture.
+  dynamics: DynamicsParams;
+}
+
+export interface DynamicsParams {
+  growthRate: Param; // g: exogenous productivity growth per year
+  returnConcentration: Param; // φ ≥ 1: exponent on wealth for capital-income allocation (super-proportional returns to big fortunes)
+  inheritanceTax: Param; // estate tax applied at generational turnover (the brake)
+  captureStrength: Param; // 0 = no political capture; >0 = wealth tilts the rules toward capital
 }

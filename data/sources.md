@@ -26,6 +26,10 @@ Ranges are deliberate — `empirical` ranges encode measurement uncertainty,
 | `oecd-socx` | in-kind vs cash split | SOCX in-kind ≈ half of social spending | OECD Social Expenditure database (SOCX) |
 | `eurostat-housing` | housing cost burden | overburden (>40%) rate **2.6%**, 2023 | [Eurostat — housing conditions](https://ec.europa.eu/eurostat/statistics-explained/index.php?title=Living_conditions_in_Europe_-_housing) |
 | `statfi-savings` | savings rate by income | household saving rate, rising with income | Statistics Finland — household income & consumption |
+| `growth-lit` | productivity growth g | ~0.5–2.5% real per year | OECD long-run growth; Finland productivity statistics |
+| `piketty` | r > g, returns to wealth | large fortunes earn higher returns | Piketty, *Capital in the 21st Century* (2014); Piketty & Zucman |
+| `vero-inheritance` | inheritance tax | Finnish estate tax brackets | Finnish Tax Administration (Vero) — perintövero |
+| `capture-lit` | political capture intensity | policy responsiveness skews to the wealthy | Gilens & Page (2014); Bartels, *Unequal Democracy* — **contested; default off** |
 | `kela-pension` | pension transfer | full national+earnings pension band | Kela / Finnish Centre for Pensions |
 | `kela-unemp` | unemployment benefit | basic + earnings-related band | Kela |
 | `kela-study` | study grant | study grant + housing supplement | Kela |

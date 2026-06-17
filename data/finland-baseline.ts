@@ -149,4 +149,29 @@ export const FINLAND_BASELINE: Params = {
     study: param(4_000, 7_000, 'policy', { unit: '€/year', source: 'kela-study' }),
     child: param(1_400, 2_200, 'policy', { unit: '€/year', source: 'kela-child' }),
   },
+
+  // --- Long-run dynamics (P4) ---
+  dynamics: {
+    growthRate: param(0.005, 0.025, 'empirical', {
+      value: 0.015,
+      unit: 'real per year',
+      note: 'g — exogenous productivity growth. Concentration runs when wealth grows faster than g.',
+      source: 'growth-lit',
+    }),
+    returnConcentration: param(1.0, 1.3, 'empirical', {
+      value: 1.12,
+      note: 'φ — returns to wealth rise super-proportionally (big fortunes earn higher r; Piketty r>g).',
+      source: 'piketty',
+    }),
+    inheritanceTax: param(0.0, 0.6, 'policy', {
+      value: 0.15,
+      note: 'Estate tax at generational turnover; the main brake on hereditary wealth.',
+      source: 'vero-inheritance',
+    }),
+    captureStrength: param(0.0, 1.0, 'policy', {
+      value: 0.0,
+      note: 'Political capture intensity. 0 = rules stay democratic; >0 = concentrated wealth tilts them toward capital. Contested — default off.',
+      source: 'capture-lit',
+    }),
+  },
 };

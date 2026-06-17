@@ -36,8 +36,8 @@ Runs entirely in the browser (no server, no cost) and deploys to GitHub Pages.
 | **P2** | Tax wedge (labour cost → consumption) + relabel demo, named policy levers, ~10k agents + Pareto top tail, decile / top-fractile views ✓ |
 | **P2.5** | "You" panel (your income → your wedge & decile placement), decile-chart polish (income-range tooltips, top-1%/0.1% zoom), PNG/CSV export ✓ |
 | **P3** | Physical layer — energy/EROI/materials/emissions drive the pie via a normalised productivity factor; energy Sankey; physical vs rules lever groups ✓ |
-| **P4** | Dynamics & political economy: r>g, inheritance, the cross-regime "merit-held-constant" avatar, intergenerational mobility, wealth→power capture loop |
-| **P5** | Scenarios + side-by-side compare ("another Finland / another era"), uncertainty bands, accessibility, share/embed |
+| **P4** | Dynamics & political economy: multi-decade wealth accumulation (r>g), inheritance brake, and the wealth→power capture loop with two-attractor trajectories ✓ |
+| **P5** | Cross-regime "merit-held-constant" avatar, intergenerational mobility, scenarios + compare, uncertainty bands, accessibility |
 
 ## Develop
 

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { runEconomy, evaluatePerson } from '../engine/economy';
   import { computePhysical } from '../engine/physical';
+  import { runDynamics } from '../engine/dynamics';
   import { FINLAND_BASELINE } from '../data/finland-baseline';
   import type { Params } from '../engine/types';
   import Sankey from './lib/Sankey.svelte';
@@ -9,6 +10,7 @@
   import DecileBars from './lib/DecileBars.svelte';
   import Person from './lib/Person.svelte';
   import ChartCard from './lib/ChartCard.svelte';
+  import TimeSeries from './lib/TimeSeries.svelte';
 
   // Physical-economy levers (set the pie's *size* via energy + infrastructure).
   let technology = $state(FINLAND_BASELINE.productivityMultiplier.value);
@@ -48,6 +50,26 @@
 
   const year = $derived(runEconomy({ seed, params }).years[0]);
   const basePhysical = computePhysical(FINLAND_BASELINE); // for relative-to-baseline readouts
+
+  // Long-run dynamics: your settings vs two reference attractors over the decades.
+  let captureStrength = $state(FINLAND_BASELINE.dynamics.captureStrength.value);
+  let inheritanceTax = $state(FINLAND_BASELINE.dynamics.inheritanceTax.value);
+  let horizon = $state(80);
+  const dynYours = $derived(runDynamics(params, { seed, years: horizon, captureStrength, inheritanceTax }));
+  const dynGuard = $derived(runDynamics(params, { seed, years: horizon, captureStrength: 0, inheritanceTax: 0.5 }));
+  const dynCapture = $derived(runDynamics(params, { seed, years: horizon, captureStrength: 1, inheritanceTax: 0.05 }));
+  const drift = $derived(dynYours.snapshots[dynYours.snapshots.length - 1]);
+
+  const series = (key: 'top10Wealth' | 'medianCapability') => [
+    { label: 'Guardrails (high inheritance tax, no capture)', color: 'var(--social)', points: dynGuard.snapshots.map((s) => s[key]) },
+    { label: 'Capture (low inheritance tax, capture on)', color: 'var(--tax)', points: dynCapture.snapshots.map((s) => s[key]) },
+    { label: 'Your settings', color: 'var(--accent)', points: dynYours.snapshots.map((s) => s[key]), dash: true },
+  ];
+  const dynamicsCsv = () => {
+    const rows: (string | number)[][] = [['year', 'top10_wealth', 'top1_wealth', 'disposable_gini', 'median_capability', 'wage_share', 'capital_tax', 'inheritance_tax']];
+    for (const s of dynYours.snapshots) rows.push([s.year, s.top10Wealth, s.top1Wealth, s.disposableGini, Math.round(s.medianCapability), s.wageShare, s.capitalTaxRate, s.inheritanceTax]);
+    return rows;
+  };
 
   // "You" — input your own income; runs through the same wedge, placed in the distribution.
   let myWage = $state(38_400); // €3,200 / month
@@ -90,7 +112,7 @@
 </script>
 
 <main>
-  <span class="phase-badge">Phase 3 · the physical economy</span>
+  <span class="phase-badge">Phase 4 · the long run</span>
   <h1>Econflow</h1>
   <p class="tagline">There is no income before institutions.</p>
 
@@ -274,6 +296,51 @@
       <span><span class="swatch" style="background:var(--social)"></span>services / transfers</span>
       <span><span class="swatch" style="background:var(--accent)"></span>real capability</span>
     </div>
+  </section>
+
+  <section>
+    <h2>The long run — how today's rules become tomorrow's dynasty</h2>
+    <p class="note" style="margin-top:0">
+      Run the same economy for decades. Wealth compounds, big fortunes earn higher returns
+      (r &gt; g), and the rich save more — so wealth concentrates unless inheritance taxes break
+      it up. Turn on <em>political capture</em> and concentrated wealth starts rewriting the rules
+      in its own favour: a self-reinforcing loop. The same starting point has two destinations.
+    </p>
+    <div class="panel">
+      <div class="levers">
+        <label class="lever">
+          <span class="top"><span>Political capture</span><span class="v">{captureStrength.toFixed(2)}</span></span>
+          <input type="range" min="0" max="1" step="0.02" bind:value={captureStrength} />
+          <span class="ends"><span>democracy holds</span><span>wealth writes the rules</span></span>
+        </label>
+        <label class="lever">
+          <span class="top"><span>Inheritance tax</span><span class="v">{pct(inheritanceTax)}</span></span>
+          <input type="range" min="0" max="0.6" step="0.01" bind:value={inheritanceTax} />
+          <span class="ends"><span>dynasties persist</span><span>broken up</span></span>
+        </label>
+        <label class="lever">
+          <span class="top"><span>Horizon</span><span class="v">{horizon} yrs</span></span>
+          <input type="range" min="20" max="120" step="5" bind:value={horizon} />
+          <span class="ends"><span>near</span><span>far</span></span>
+        </label>
+      </div>
+      <p class="note" style="margin-bottom:0">
+        Under <em>your</em> settings, over {horizon} years the rules drift to:
+        wage share <strong>{pct(dynYours.snapshots[0].wageShare)} → {pct(drift.wageShare)}</strong>,
+        capital tax <strong>{pct(dynYours.snapshots[0].capitalTaxRate)} → {pct(drift.capitalTaxRate)}</strong>,
+        inheritance tax <strong>{pct(inheritanceTax)} → {pct(drift.inheritanceTax)}</strong>.
+        {#if dynYours.oligarchic}<span style="color:var(--tax)"> Wealth concentration ran away.</span>{/if}
+      </p>
+    </div>
+
+    <ChartCard title="Top-10% wealth share over time" filename="econflow-dynamics" csv={dynamicsCsv}>
+      <TimeSeries series={series('top10Wealth')} years={horizon} format="pct" />
+    </ChartCard>
+
+    <h3 style="font-size:1rem;margin:1.5rem 0 0.5rem">Median capability — does broad prosperity follow?</h3>
+    <ChartCard title="Median capability over time" filename="econflow-dynamics-capability">
+      <TimeSeries series={series('medianCapability')} years={horizon} format="eur" />
+    </ChartCard>
   </section>
 
   <section>

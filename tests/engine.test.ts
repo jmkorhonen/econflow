@@ -2,6 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import { runEconomy, evaluatePerson } from '../engine/economy';
 import { computePhysical } from '../engine/physical';
+import { runDynamics } from '../engine/dynamics';
 import { FINLAND_BASELINE } from '../data/finland-baseline';
 import { gini, topShare, median } from '../engine/metrics';
 import { param, exact, midpoint } from '../engine/param';
@@ -150,6 +151,33 @@ describe('runEconomy', () => {
     const first = cs[0].socialWageReceived;
     expect(first).toBeGreaterThan(0);
     expect(cs.every((c) => Math.abs(c.socialWageReceived - first) < 1e-6)).toBe(true);
+  });
+});
+
+describe('dynamics (long run)', () => {
+  it('is deterministic and returns years+1 snapshots', () => {
+    const a = runDynamics(FINLAND_BASELINE, { seed: 3, years: 40 });
+    const b = runDynamics(FINLAND_BASELINE, { seed: 3, years: 40 });
+    expect(a.snapshots).toHaveLength(41);
+    expect(a.snapshots[40].top10Wealth).toBe(b.snapshots[40].top10Wealth);
+  });
+
+  it('the capture loop drifts the rules toward capital; without it they hold', () => {
+    const captured = runDynamics(FINLAND_BASELINE, { seed: 3, years: 60, captureStrength: 1, inheritanceTax: 0 });
+    const stable = runDynamics(FINLAND_BASELINE, { seed: 3, years: 60, captureStrength: 0, inheritanceTax: 0 });
+    const cap = captured.snapshots;
+    const stb = stable.snapshots;
+    // capture pushes the wage share down over time; with capture off it is unchanged.
+    expect(cap[60].wageShare).toBeLessThan(cap[0].wageShare);
+    expect(stb[60].wageShare).toBeCloseTo(stb[0].wageShare, 6);
+    // and concentrates wealth more than the no-capture run.
+    expect(cap[60].top10Wealth).toBeGreaterThan(stb[60].top10Wealth);
+  });
+
+  it('a higher inheritance tax leaves wealth less concentrated', () => {
+    const low = runDynamics(FINLAND_BASELINE, { seed: 5, years: 90, inheritanceTax: 0, captureStrength: 0 });
+    const high = runDynamics(FINLAND_BASELINE, { seed: 5, years: 90, inheritanceTax: 0.5, captureStrength: 0 });
+    expect(high.snapshots[90].top10Wealth).toBeLessThan(low.snapshots[90].top10Wealth);
   });
 
   it('population scales to the configured N', () => {
