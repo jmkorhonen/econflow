@@ -116,22 +116,30 @@ describe('runEconomy', () => {
   });
 
   it('decile shares of capability sum to 1 and rise monotonically', () => {
-    const d = runEconomy({ seed: 5 }).years[0].distribution.capability.shares;
+    const d = runEconomy({ seed: 5 }).years[0].distribution.capability.deciles.shares;
     expect(d.reduce((s, v) => s + v, 0)).toBeCloseTo(1, 5);
     for (let i = 1; i < d.length; i++) expect(d[i]).toBeGreaterThanOrEqual(d[i - 1]);
   });
 
+  it('percentile breakdown has 100 buckets summing to 1', () => {
+    const p = runEconomy({ seed: 5 }).years[0].distribution.disposable.percentiles.shares;
+    expect(p).toHaveLength(100);
+    expect(p.reduce((s, v) => s + v, 0)).toBeCloseTo(1, 5);
+  });
+
   it('decile edges are ascending and bound each decile', () => {
-    const e = runEconomy({ seed: 5 }).years[0].distribution.disposable.edges;
+    const e = runEconomy({ seed: 5 }).years[0].distribution.disposable.deciles.edges;
     expect(e).toHaveLength(10);
     for (let i = 0; i < 10; i++) expect(e[i].hi).toBeGreaterThanOrEqual(e[i].lo);
     for (let i = 1; i < 10; i++) expect(e[i].lo).toBeGreaterThanOrEqual(e[i - 1].lo);
   });
 
   it('top fractiles nest: top 0.1% ≤ top 1% ≤ top 10%', () => {
-    const d = runEconomy({ seed: 5 }).years[0].distribution;
+    const d = runEconomy({ seed: 5 }).years[0].distribution.disposable;
     expect(d.top01).toBeLessThanOrEqual(d.top1);
     expect(d.top1).toBeLessThanOrEqual(d.top10);
+    expect(d.bottom10).toBeLessThanOrEqual(0.1); // bottom decile holds less than an equal share
+    expect(d.median).toBeGreaterThan(0);
   });
 
   it('evaluatePerson is consistent with the engine and ranks higher incomes higher', () => {

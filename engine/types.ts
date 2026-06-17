@@ -120,21 +120,27 @@ export interface Metrics {
   medianTaxWedge: number;
 }
 
-/** Per-decile shares plus the income range (€ lo–hi) that defines each decile. */
-export interface DecileBreakdown {
-  shares: number[]; // index 0 = poorest decile; sums to 1
-  edges: { lo: number; hi: number }[]; // income bounds of each decile, for tooltips
+/** Per-quantile shares plus the income range (€ lo–hi) that defines each quantile. */
+export interface QuantileBreakdown {
+  shares: number[]; // index 0 = poorest; sums to 1
+  edges: { lo: number; hi: number }[]; // income bounds of each quantile, for tooltips
 }
 
-export interface Distribution {
-  /** Decile breakdowns of market income, disposable income, and capability (adults only). */
-  market: DecileBreakdown;
-  disposable: DecileBreakdown;
-  capability: DecileBreakdown;
-  /** Top-fractile shares of disposable income (subsets of the top decile). */
+/** A single income concept (market / disposable / capability), summarised every way the chart needs. */
+export interface MetricDistribution {
+  deciles: QuantileBreakdown; // 10 buckets
+  percentiles: QuantileBreakdown; // 100 buckets
+  bottom10: number; // share held by the bottom decile
   top10: number;
   top1: number;
   top01: number;
+  median: number; // € median value
+}
+
+export interface Distribution {
+  market: MetricDistribution;
+  disposable: MetricDistribution;
+  capability: MetricDistribution;
 }
 
 /** Result of running a user's own income through the same wedge as the synthetic population. */

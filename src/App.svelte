@@ -47,7 +47,7 @@
   const decileCsv = () => {
     const rows: (string | number)[][] = [['metric', 'decile', 'share', 'income_lo', 'income_hi']];
     for (const m of ['market', 'disposable', 'capability'] as const) {
-      const b = year.distribution[m];
+      const b = year.distribution[m].deciles;
       b.shares.forEach((s, i) => rows.push([m, `D${i + 1}`, s, b.edges[i].lo, b.edges[i].hi]));
     }
     return rows;
@@ -169,7 +169,11 @@
   <section>
     <h2>Who gets the GDP?</h2>
     <ChartCard title="Distribution by decile" filename="econflow-deciles" csv={decileCsv}>
-      <DecileBars distribution={year.distribution} userDecile={person?.decile ?? null} />
+      <DecileBars
+        distribution={year.distribution}
+        userDecile={person?.decile ?? null}
+        userPercentile={person?.percentile ?? null}
+      />
     </ChartCard>
   </section>
 

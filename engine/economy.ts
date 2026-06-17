@@ -27,7 +27,7 @@ import { makeRng, type Rng } from './rng';
 import { allocateLabour, allocateCapital } from './distribution';
 import { labourTax, capitalTax } from './fiscal';
 import { gini, median } from './metrics';
-import { decileBreakdown, decileOf, topFractileShare } from './aggregate';
+import { quantileBreakdown, decileOf, topFractileShare } from './aggregate';
 
 export interface RunOpts {
   seed?: number;
@@ -201,14 +201,23 @@ function computeMetrics(citizens: Citizen[], output: number, totalBudget: number
 function computeDistribution(citizens: Citizen[]): Distribution {
   // Distribution among the adult population (children are not income units).
   const adults = citizens.filter((c) => c.class !== 'child');
-  const disposable = adults.map((c) => Math.max(0, c.disposable));
   return {
-    market: decileBreakdown(adults.map((c) => Math.max(0, c.grossWage + c.capitalIncome))),
-    disposable: decileBreakdown(disposable),
-    capability: decileBreakdown(adults.map((c) => Math.max(0, c.capability))),
-    top10: topFractileShare(disposable, 0.1),
-    top1: topFractileShare(disposable, 0.01),
-    top01: topFractileShare(disposable, 0.001),
+    market: metricDistribution(adults.map((c) => Math.max(0, c.grossWage + c.capitalIncome))),
+    disposable: metricDistribution(adults.map((c) => Math.max(0, c.disposable))),
+    capability: metricDistribution(adults.map((c) => Math.max(0, c.capability))),
+  };
+}
+
+function metricDistribution(values: number[]) {
+  const deciles = quantileBreakdown(values, 10);
+  return {
+    deciles,
+    percentiles: quantileBreakdown(values, 100),
+    bottom10: deciles.shares[0],
+    top10: topFractileShare(values, 0.1),
+    top1: topFractileShare(values, 0.01),
+    top01: topFractileShare(values, 0.001),
+    median: median(values),
   };
 }
 
