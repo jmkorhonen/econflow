@@ -29,12 +29,12 @@ Runs entirely in the browser (no server, no cost) and deploys to GitHub Pages.
 
 | Phase | Deliverable |
 |-------|-------------|
-| **P0** | Scaffold: range-based engine skeleton, tests, Pages auto-deploy *(this commit)* |
-| **P1** | Distribution + fiscal engine, Finland baseline, money Sankey, income waterfall |
-| **P2** | Physical layer (energy/materials/EROI/emissions) + physical Sankey |
-| **P3** | Money↔physics coupling, multi-decade wealth dynamics (r>g, housing) |
-| **P4** | Named scenarios + side-by-side compare ("another Finland") + bounded feedbacks |
-| **P5** | Methodology docs, uncertainty bands, accessibility, share/embed |
+| **P0** | Scaffold: range-based engine skeleton, tests, Pages auto-deploy ✓ |
+| **P1** | Distribution + progressive fiscal engine, Finland baseline, money Sankey, income waterfall ✓ |
+| **P2** | Tax wedge (labour cost → consumption) + relabel demo, named policy levers, ~10k agents + Pareto top tail, decile / top-fractile views ✓ |
+| **P3** | Physical layer (energy/materials/EROI/emissions) + physical Sankey, driving the productivity multiplier |
+| **P4** | Dynamics & political economy: r>g, inheritance, the cross-regime "merit-held-constant" avatar, intergenerational mobility, wealth→power capture loop |
+| **P5** | Scenarios + side-by-side compare ("another Finland / another era"), uncertainty bands, accessibility, share/embed |
 
 ## Develop
 

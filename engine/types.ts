@@ -51,16 +51,37 @@ export const CITIZEN_CLASSES: readonly CitizenClass[] = [
 export interface Citizen {
   id: number;
   class: CitizenClass;
-  laborIncome: number;
+  /** Reproducible percentile of effort/skill in [0,1]. Held constant lets us isolate
+   *  "merit" from institutions — the same person re-run across machines (P4 avatar). */
+  meritRank: number;
+
+  // --- Primary distribution ---
+  /** Compensation of employees (total labour cost to the employer, incl. employer contributions). */
+  totalLabourCost: number;
   capitalIncome: number;
-  transfers: number;
-  taxesPaid: number;
-  /** Value of in-kind public services received (the "social wage"). */
-  socialWageReceived: number;
-  housingCost: number;
-  wealth: number;
-  /** Headline metric: disposable income + social wage − housing cost. */
+
+  // --- The wedge: labour cost → real consumption ---
+  employerContrib: number; // social contributions paid by the employer (on top of gross)
+  grossWage: number; // totalLabourCost − employerContrib ("your salary")
+  employeeContrib: number; // social contributions withheld from gross
+  incomeTax: number; // progressive tax on taxable labour income
+  capitalTax: number; // flat tax on capital income
+  transfers: number; // cash transfers received
+  disposable: number; // cash in hand after tax + transfers
+  savings: number; // set aside (becomes future wealth; not current consumption)
+  vatPaid: number; // consumption tax embedded in spending
+  realConsumption: number; // goods/services actually obtained after VAT
+  socialWageReceived: number; // value of in-kind public services
+
+  housingCost: number; // tracked sub-line of consumption (VAT-exempt rent)
+  wealth: number; // crude proxy until P3 dynamics
+  /** Headline real-welfare metric: real private consumption + social wage. */
   capability: number;
+
+  /** @deprecated alias for grossWage, kept so older call-sites read clearly. */
+  laborIncome: number;
+  /** Total tax + contributions reaching the public budget from this citizen. */
+  taxesPaid: number;
 }
 
 export interface SankeyLink {
@@ -91,9 +112,47 @@ export interface Metrics {
   disposableGini: number;
   top1WealthShare: number;
   top10WealthShare: number;
+  top01WealthShare: number; // top 0.1%
   medianCapability: number;
   /** Realized average effective tax rate on factor income, for display. */
   avgEffectiveTaxRate: number;
+  /** OECD-style tax wedge for the median worker: (labour cost − real consumption) / labour cost. */
+  medianTaxWedge: number;
+}
+
+/** Share of a total captured by each of ten deciles (index 0 = poorest). */
+export type DecileShares = number[];
+
+export interface Distribution {
+  /** Decile shares of market income, disposable income, and capability. */
+  market: DecileShares;
+  disposable: DecileShares;
+  capability: DecileShares;
+  /** Top-fractile shares of disposable income. */
+  top10: number;
+  top1: number;
+  top01: number;
+}
+
+/** A single euro-slice of the median worker's labour-cost → capability wedge. */
+export interface WedgeSlice {
+  label: string;
+  amount: number; // €, always ≥ 0
+  kind: 'employer_contrib' | 'employee_contrib' | 'income_tax' | 'vat' | 'savings' | 'take_home' | 'social_wage';
+  /** Where the slice sits relative to the "gross wage" line, for the relabel demo. */
+  side: 'above_gross' | 'below_gross' | 'consumption' | 'returned';
+}
+
+export interface Wedge {
+  totalLabourCost: number;
+  grossWage: number;
+  takeHome: number; // net cash the worker can spend or save
+  realConsumption: number;
+  capability: number;
+  /** Total labour-side public take (employer + employee contributions + income tax) — the
+   *  amount the relabel slider redistributes between "employer contribution" and "income tax". */
+  labourSideTake: number;
+  slices: WedgeSlice[];
 }
 
 /** One step in the "where did your income come from?" decomposition. */
@@ -119,6 +178,10 @@ export interface YearState {
   metrics: Metrics;
   /** Income decomposition for a representative median worker (the headline graphic). */
   representative: Decomposition;
+  /** Decile / top-fractile distribution of income and capability. */
+  distribution: Distribution;
+  /** The median worker's labour-cost → capability wedge (drives the relabel demo). */
+  wedge: Wedge;
 }
 
 export interface SimResult {
@@ -134,21 +197,34 @@ export interface Params {
   population: number;
   classShares: Record<CitizenClass, number>;
 
-  // Physical layer (stubbed in P0/P1, fleshed out in P2).
-  realOutput: Param; // total annual real output, € (scaled to GDP-per-capita × population)
+  // Physical / productive substrate.
+  // Pie = perCapitaOutput × population × productivityMultiplier. The multiplier defaults
+  // to 1 and is the hook the P3 physical layer and the "what-if technology/infrastructure"
+  // counterfactual will drive — without touching the distribution code.
+  perCapitaOutput: Param; // € of real output per capita
+  productivityMultiplier: Param; // 1.0 = baseline; tech/infrastructure regime scales the pie
   energyMix: Record<string, Param>; // shares by source, should sum to ~1
   eroi: Param;
 
-  // Distribution layer.
-  wageShare: Param; // fraction of output flowing to labour
+  // Distribution layer. These are structural parameters the (P4) policy-capture loop and
+  // predistribution levers will write to; the engine only reads them.
+  wageShare: Param; // labour share of output (compensation of employees ÷ output)
   wageDispersion: Param; // lognormal sigma of within-labour pay
-  capitalDispersion: Param; // lognormal sigma of capital ownership (wider ⇒ more concentration)
+  capitalParetoAlpha: Param; // Pareto exponent of capital ownership (lower ⇒ fatter top tail)
 
-  // Fiscal layer (progressive in P1).
-  taxLevel: Param; // policy multiplier scaling the whole progressive labour-tax schedule
-  capitalTaxRate: Param; // flat rate on capital income (Finland taxes capital income ~30–34%)
-  socialWageFraction: Param; // fraction of public budget delivered as in-kind services vs cash
-  housingCostFraction: Param; // share of disposable income spent on housing
+  // Fiscal / wedge layer (the P2 named policy levers).
+  employerContribRate: Param; // employer social contributions as a share of gross wage
+  employeeContribRate: Param; // employee social contributions as a share of gross wage
+  taxLevel: Param; // multiplier on the progressive labour-tax schedule
+  taxProgressivity: Param; // tilts the schedule: >1 steepens top brackets, <1 flattens
+  capitalTaxRate: Param; // flat rate on capital income
+  vatRate: Param; // value-added / consumption tax rate
+  socialWageFraction: Param; // share of public budget delivered as in-kind services vs cash
+  housingCostFraction: Param; // share of consumption spent on (VAT-exempt) housing
+
+  // Savings rise with income → VAT is regressive on annual income.
+  savingsRateBase: Param; // savings rate at the median
+  savingsRateSlope: Param; // additional savings rate per unit of (income / median − 1)
 
   // Cash transfers (annual €, before means-testing — stylised flat amounts).
   transfers: {

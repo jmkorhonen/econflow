@@ -17,7 +17,11 @@
     'Public services': 'var(--social)',
     'Cash transfers': 'var(--social)',
     'Other spending': 'var(--muted)',
-    'Net household income': 'var(--labor)',
+    Households: 'var(--labor)',
+    Savings: 'var(--muted)',
+    Consumption: 'var(--labor)',
+    VAT: 'var(--tax)',
+    'Real consumption': 'var(--labor)',
     'Real capability': 'var(--accent)',
   };
   const nodeColor = (name: string) => COLOR[name] ?? 'var(--muted)';

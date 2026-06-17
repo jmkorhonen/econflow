@@ -8,16 +8,20 @@ Ranges are deliberate — `empirical` ranges encode measurement uncertainty,
 
 | key | parameter | central figure used | source |
 |-----|-----------|---------------------|--------|
-| `statfi-gdp` | real output (per-capita scaled) | GDP ≈ €270 bn / 5.6 m ≈ €48k pc | [Statistics Finland — national accounts](https://stat.fi/en/statistics/vtp) |
+| `statfi-gdp` | per-capita output | GDP ≈ €270 bn / 5.6 m ≈ €48k pc | [Statistics Finland — national accounts](https://stat.fi/en/statistics/vtp) |
+| `tfp-lit` | productivity multiplier | infrastructure/TFP elasticity of output | Aschauer (1989); Hall & Jones (1999) — illustrative, not a point estimate |
 | `statfi-energy` | primary energy shares | renewables **42%** of total energy consumption, 2023 | [Statistics Finland — energy supply 2023](https://stat.fi/en/publication/cln32y7ve5mem0bvzcoduq5xx) |
 | `eroi-lit` | energy return on investment | range 8–14 (society-wide) | Hall, Lambert & Balogh (2014), *Energy Policy* — literature range |
 | `oecd-labour-share` | labour share of output | adjusted labour share ≈ 0.57–0.60 | [OECD compendium of productivity indicators 2025](https://www.oecd.org/en/publications/oecd-compendium-of-productivity-indicators-2025_b024d9e1-en.html) |
 | `oecd-earnings-disp` | within-labour pay spread | Finland earnings D9/D1 ≈ 2.5 (low) | OECD Earnings distribution database |
 | `statfi-wealth` | capital/wealth concentration | top-10% own **52%** of net wealth, 2023 | [Statistics Finland — households' assets 2023](https://stat.fi/en/publication/cm1hek7m45vlf07vxdwvayu3c) |
-| `oecd-tax` | tax level | total tax ≈ **43%** of GDP | [OECD — tax revenue, Finland](https://data.oecd.org/tax/tax-revenue.htm) |
+| `vero-contrib` | employer/employee social contributions | employer ≈ 20%, employee ≈ 10% of gross | Finnish Tax Administration (Vero) / TyEL |
+| `oecd-tax` | tax level + progressivity | total tax ≈ **43%** of GDP; avg-worker tax wedge ≈ 43% | [OECD — tax revenue / taxing wages, Finland](https://data.oecd.org/tax/tax-revenue.htm) |
 | `vero-capital` | capital income tax rate | 30% up to €30k, 34% above | Finnish Tax Administration (Vero) |
+| `vero-vat` | VAT rate | standard rate **25.5%** (2024) | Finnish Tax Administration (Vero) |
 | `oecd-socx` | in-kind vs cash split | SOCX in-kind ≈ half of social spending | OECD Social Expenditure database (SOCX) |
 | `eurostat-housing` | housing cost burden | overburden (>40%) rate **2.6%**, 2023 | [Eurostat — housing conditions](https://ec.europa.eu/eurostat/statistics-explained/index.php?title=Living_conditions_in_Europe_-_housing) |
+| `statfi-savings` | savings rate by income | household saving rate, rising with income | Statistics Finland — household income & consumption |
 | `kela-pension` | pension transfer | full national+earnings pension band | Kela / Finnish Centre for Pensions |
 | `kela-unemp` | unemployment benefit | basic + earnings-related band | Kela |
 | `kela-study` | study grant | study grant + housing supplement | Kela |

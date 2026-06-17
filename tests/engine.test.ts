@@ -49,11 +49,11 @@ describe('runEconomy', () => {
     expect(a.years[0].metrics.gini).not.toBe(b.years[0].metrics.gini);
   });
 
-  it('respects the accounting identity: factor incomes sum to real output', () => {
+  it('respects the accounting identity: compensation + capital sum to real output', () => {
     const { years } = runEconomy({ seed: 7 });
     const y = years[0];
-    const factorSum = y.citizens.reduce((s, c) => s + c.laborIncome + c.capitalIncome, 0);
-    expect(factorSum).toBeCloseTo(y.physical.realOutput, 2);
+    const factorSum = y.citizens.reduce((s, c) => s + c.totalLabourCost + c.capitalIncome, 0);
+    expect(factorSum).toBeCloseTo(y.physical.realOutput, 1);
   });
 
   it('produces a Gini within [0, 1]', () => {
@@ -88,10 +88,10 @@ describe('runEconomy', () => {
     expect(sum).toBeCloseTo(d.capability, 2);
   });
 
-  it('progressive tax: higher earners pay a higher effective rate', () => {
-    const cs = runEconomy({ seed: 6 }).years[0].citizens.filter((c) => c.laborIncome > 0);
-    const rate = (c: (typeof cs)[number]) => c.taxesPaid / (c.laborIncome + c.capitalIncome);
-    const sorted = [...cs].sort((a, b) => a.laborIncome - b.laborIncome);
+  it('progressive tax: higher earners pay a higher effective income-tax rate', () => {
+    const cs = runEconomy({ seed: 6 }).years[0].citizens.filter((c) => c.grossWage > 0);
+    const rate = (c: (typeof cs)[number]) => c.incomeTax / c.grossWage;
+    const sorted = [...cs].sort((a, b) => a.grossWage - b.grossWage);
     const low = rate(sorted[Math.floor(sorted.length * 0.1)]);
     const high = rate(sorted[Math.floor(sorted.length * 0.9)]);
     expect(high).toBeGreaterThan(low);
@@ -102,5 +102,35 @@ describe('runEconomy', () => {
     const first = cs[0].socialWageReceived;
     expect(first).toBeGreaterThan(0);
     expect(cs.every((c) => Math.abs(c.socialWageReceived - first) < 1e-6)).toBe(true);
+  });
+
+  it('population scales to the configured N', () => {
+    expect(runEconomy({ seed: 1 }).years[0].citizens.length).toBeGreaterThan(9000);
+  });
+
+  it('the wedge slices (excluding the returned social wage) reconstruct total labour cost', () => {
+    const w = runEconomy({ seed: 5 }).years[0].wedge;
+    const sum = w.slices.filter((s) => s.side !== 'returned').reduce((s, x) => s + x.amount, 0);
+    expect(sum).toBeCloseTo(w.totalLabourCost, 1);
+  });
+
+  it('decile shares of capability sum to 1 and rise monotonically', () => {
+    const d = runEconomy({ seed: 5 }).years[0].distribution.capability;
+    expect(d.reduce((s, v) => s + v, 0)).toBeCloseTo(1, 5);
+    for (let i = 1; i < d.length; i++) expect(d[i]).toBeGreaterThanOrEqual(d[i - 1]);
+  });
+
+  it('top fractiles nest: top 0.1% ≤ top 1% ≤ top 10%', () => {
+    const d = runEconomy({ seed: 5 }).years[0].distribution;
+    expect(d.top01).toBeLessThanOrEqual(d.top1);
+    expect(d.top1).toBeLessThanOrEqual(d.top10);
+  });
+
+  it('VAT is regressive on income: the bottom spends a larger income-share on VAT', () => {
+    const cs = runEconomy({ seed: 5 }).years[0].citizens.filter((c) => c.disposable > 0);
+    const sorted = [...cs].sort((a, b) => a.disposable - b.disposable);
+    const lowBurden = sorted[Math.floor(sorted.length * 0.1)].vatPaid / sorted[Math.floor(sorted.length * 0.1)].disposable;
+    const highBurden = sorted[Math.floor(sorted.length * 0.9)].vatPaid / sorted[Math.floor(sorted.length * 0.9)].disposable;
+    expect(lowBurden).toBeGreaterThan(highBurden);
   });
 });

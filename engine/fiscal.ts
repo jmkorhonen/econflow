@@ -18,18 +18,28 @@ const LABOUR_BRACKETS: Bracket[] = [
   { upTo: Infinity, rate: 0.51 },
 ];
 
+// Income around which progressivity pivots: above it rates steepen, below they flatten.
+const PROGRESSIVITY_PIVOT = 35_000;
+
 /**
- * Progressive tax on labour income. `level` (≈1.0) scales every marginal rate,
- * capped so an effective rate never exceeds 100%.
+ * Progressive tax on labour income.
+ * - `level` (≈1.0) scales every marginal rate (overall tax burden).
+ * - `progressivity` (≈1.0) tilts the schedule around a pivot income: >1 raises top-bracket
+ *   rates and trims low ones (more progressive); <1 flattens toward a flat tax.
+ * Effective rate is capped at 100%.
  */
-export function labourTax(income: number, level: number): number {
+export function labourTax(income: number, level: number, progressivity = 1): number {
   if (income <= 0) return 0;
   let tax = 0;
   let lower = 0;
   for (const b of LABOUR_BRACKETS) {
     if (income <= lower) break;
     const band = Math.min(income, b.upTo) - lower;
-    tax += band * Math.min(1, b.rate * level);
+    // Tilt this bracket's rate by how far its midpoint sits from the pivot.
+    const mid = (lower + Math.min(income, b.upTo)) / 2;
+    const tilt = 1 + (progressivity - 1) * Math.tanh((mid - PROGRESSIVITY_PIVOT) / PROGRESSIVITY_PIVOT);
+    const rate = Math.max(0, Math.min(1, b.rate * level * tilt));
+    tax += band * rate;
     lower = b.upTo;
   }
   return Math.min(tax, income);
