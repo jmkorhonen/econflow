@@ -1,9 +1,13 @@
 // tests/engine.test.ts
 import { describe, it, expect } from 'vitest';
 import { runEconomy, evaluatePerson } from '../engine/economy';
+import { computePhysical } from '../engine/physical';
 import { FINLAND_BASELINE } from '../data/finland-baseline';
 import { gini, topShare, median } from '../engine/metrics';
 import { param, exact, midpoint } from '../engine/param';
+
+// Deep-clone the baseline so tests can mutate physical params without bleeding state.
+const clone = () => structuredClone(FINLAND_BASELINE);
 
 describe('param', () => {
   it('defaults value to the midpoint of the range', () => {
@@ -96,6 +100,49 @@ describe('runEconomy', () => {
     const low = rate(sorted[Math.floor(sorted.length * 0.1)]);
     const high = rate(sorted[Math.floor(sorted.length * 0.9)]);
     expect(high).toBeGreaterThan(low);
+  });
+
+  it('physical productivity factor is exactly 1.0 at the baseline', () => {
+    expect(computePhysical(FINLAND_BASELINE).productivityFactor).toBeCloseTo(1, 6);
+  });
+
+  it('losing infrastructure shrinks the pie', () => {
+    const lo = clone();
+    lo.physical.infrastructure.value = 0.6;
+    expect(computePhysical(lo).realOutput).toBeLessThan(computePhysical(FINLAND_BASELINE).realOutput);
+  });
+
+  it('a cleaner energy mix lowers emissions', () => {
+    const green = clone();
+    green.physical.energyMix.fossil.value = 0.1;
+    green.physical.energyMix.renewable.value = 0.7;
+    expect(computePhysical(green).emissions).toBeLessThan(computePhysical(FINLAND_BASELINE).emissions);
+  });
+
+  it('lower EROI leaves less net energy and less output', () => {
+    const lowEroi = clone();
+    for (const s of ['fossil', 'nuclear', 'renewable'] as const) lowEroi.physical.eroi[s].value = 3;
+    const base = computePhysical(FINLAND_BASELINE);
+    const worse = computePhysical(lowEroi);
+    expect(worse.netEnergy).toBeLessThan(base.netEnergy);
+    expect(worse.realOutput).toBeLessThan(base.realOutput);
+  });
+
+  it('the physical layer drives the economic pie end to end', () => {
+    const lo = clone();
+    lo.physical.infrastructure.value = 0.6;
+    const base = runEconomy({ seed: 5 }).years[0];
+    const poorer = runEconomy({ seed: 5, params: lo }).years[0];
+    expect(poorer.metrics.medianCapability).toBeLessThan(base.metrics.medianCapability);
+  });
+
+  it('the energy Sankey conserves: primary energy = useful work + losses', () => {
+    const phys = runEconomy({ seed: 5 }).years[0];
+    const links = phys.flows.physical;
+    const primary = links.filter((l) => l.source === 'Primary energy').reduce((s, l) => s + l.value, 0);
+    const useful = links.filter((l) => l.target === 'Useful work').reduce((s, l) => s + l.value, 0);
+    const losses = links.filter((l) => l.target === 'Lost (EROI + conversion)').reduce((s, l) => s + l.value, 0);
+    expect(useful + losses).toBeCloseTo(primary, 4);
   });
 
   it('the social wage lifts everyone equally (in-kind, per capita)', () => {

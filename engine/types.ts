@@ -91,13 +91,20 @@ export interface SankeyLink {
 }
 
 export interface PhysicalState {
-  /** Primary energy by source, in arbitrary energy units. */
+  /** Gross primary energy by source (per-capita index units). */
   primaryEnergy: Record<string, number>;
-  /** Energy return on energy invested. */
-  eroi: number;
+  /** Net energy after the energy spent getting energy (EROI losses). */
+  netEnergy: number;
+  /** Useful work delivered to the economy (net energy × conversion efficiency). */
   usefulWork: number;
-  materialThroughput: number;
+  /** Society-wide blended EROI across the mix. */
+  eroiBlended: number;
+  renewableShare: number;
+  /** CO₂ emissions, per-capita index (fossil energy × emission factor). */
   emissions: number;
+  materials: { throughput: number; virgin: number; recycled: number; waste: number };
+  /** Physical contribution to the output multiplier (= 1.0 at the Finland baseline). */
+  productivityFactor: number;
   /** Real output of the physical economy (the "pie" before any rules). */
   realOutput: number;
 }
@@ -218,6 +225,20 @@ export interface SimResult {
   seed: number;
 }
 
+/** Physical-economy parameters: energy, infrastructure, materials. */
+export interface PhysicalParams {
+  primaryEnergyIndex: Param; // total primary energy per capita (1.0 = baseline)
+  energyMix: { fossil: Param; nuclear: Param; renewable: Param }; // shares, sum ≈ 1
+  eroi: { fossil: Param; nuclear: Param; renewable: Param }; // energy return on energy invested
+  conversionEfficiency: Param; // useful work ÷ net primary energy
+  infrastructure: Param; // social-overhead-capital stock index (1.0 = baseline)
+  energyElasticity: Param; // α: output elasticity wrt net useful energy
+  infraElasticity: Param; // β: output elasticity wrt infrastructure
+  emissionFactorFossil: Param; // CO₂ per unit fossil primary energy
+  materialIntensity: Param; // material throughput per unit output (1.0 = baseline)
+  recyclingRate: Param; // share of throughput met from recycled stock
+}
+
 /**
  * The full parameter set the engine consumes. Empirical/policy entries are
  * Params (carrying ranges + sources); structural counts are plain numbers.
@@ -227,13 +248,12 @@ export interface Params {
   classShares: Record<CitizenClass, number>;
 
   // Physical / productive substrate.
-  // Pie = perCapitaOutput × population × productivityMultiplier. The multiplier defaults
-  // to 1 and is the hook the P3 physical layer and the "what-if technology/infrastructure"
-  // counterfactual will drive — without touching the distribution code.
+  // Pie = perCapitaOutput × population × productivityMultiplier × physical.productivityFactor.
+  // The physical factor is computed from energy + infrastructure (P3); productivityMultiplier
+  // is the residual "technology / know-how" lever. Both are 1.0 at the Finland baseline.
   perCapitaOutput: Param; // € of real output per capita
-  productivityMultiplier: Param; // 1.0 = baseline; tech/infrastructure regime scales the pie
-  energyMix: Record<string, Param>; // shares by source, should sum to ~1
-  eroi: Param;
+  productivityMultiplier: Param; // technology / total-factor residual (1.0 = baseline)
+  physical: PhysicalParams;
 
   // Distribution layer. These are structural parameters the (P4) policy-capture loop and
   // predistribution levers will write to; the engine only reads them.

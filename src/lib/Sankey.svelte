@@ -23,6 +23,14 @@
     VAT: 'var(--tax)',
     'Real consumption': 'var(--labor)',
     'Real capability': 'var(--accent)',
+    // physical layer
+    'Primary energy': 'var(--accent)',
+    Fossil: 'var(--tax)',
+    Nuclear: 'var(--public)',
+    Renewable: 'var(--social)',
+    'Useful work': 'var(--labor)',
+    'Lost (EROI + conversion)': 'var(--muted)',
+    'Economic output': 'var(--accent)',
   };
   const nodeColor = (name: string) => COLOR[name] ?? 'var(--muted)';
 

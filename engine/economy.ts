@@ -14,7 +14,6 @@ import type {
   Distribution,
   Params,
   PersonResult,
-  PhysicalState,
   SankeyLink,
   SimResult,
   Wedge,
@@ -28,6 +27,7 @@ import { allocateLabour, allocateCapital } from './distribution';
 import { labourTax, capitalTax } from './fiscal';
 import { gini, median } from './metrics';
 import { quantileBreakdown, decileOf, topFractileShare } from './aggregate';
+import { computePhysical, energySankey } from './physical';
 
 export interface RunOpts {
   seed?: number;
@@ -57,7 +57,9 @@ const TRANSFER_CLASS: Partial<Record<CitizenClass, keyof Params['transfers']>> =
 };
 
 function simulateYear(year: number, p: Params, rng: Rng): YearState {
-  const output = p.perCapitaOutput.value * p.population * p.productivityMultiplier.value;
+  // The physical economy sets the size of the pie (energy + infrastructure → productivity).
+  const physical = computePhysical(p);
+  const output = physical.realOutput;
   const laborPool = output * p.wageShare.value; // compensation of employees (incl. employer contributions)
   const capitalPool = output - laborPool; // identity: pools sum to output
 
@@ -121,7 +123,7 @@ function simulateYear(year: number, p: Params, rng: Rng): YearState {
 
   return {
     year,
-    physical: physicalStub(p, output),
+    physical,
     flows: {
       money: moneySankey({
         laborPool,
@@ -137,7 +139,7 @@ function simulateYear(year: number, p: Params, rng: Rng): YearState {
         otherSpending,
         socialWageBudget,
       }),
-      physical: [],
+      physical: energySankey(p, physical),
     },
     citizens,
     metrics: computeMetrics(citizens, output, totalBudget),
@@ -378,16 +380,3 @@ export function evaluatePerson(
   };
 }
 
-function physicalStub(p: Params, output: number): PhysicalState {
-  const total = 1000;
-  const primaryEnergy: Record<string, number> = {};
-  for (const [src, share] of Object.entries(p.energyMix)) primaryEnergy[src] = total * share.value;
-  return {
-    primaryEnergy,
-    eroi: p.eroi.value,
-    usefulWork: total * 0.4,
-    materialThroughput: total * 0.5,
-    emissions: (primaryEnergy['fossil'] ?? 0) * 0.3,
-    realOutput: output,
-  };
-}

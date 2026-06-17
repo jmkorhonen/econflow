@@ -11,7 +11,11 @@ Ranges are deliberate — `empirical` ranges encode measurement uncertainty,
 | `statfi-gdp` | per-capita output | GDP ≈ €270 bn / 5.6 m ≈ €48k pc | [Statistics Finland — national accounts](https://stat.fi/en/statistics/vtp) |
 | `tfp-lit` | productivity multiplier | infrastructure/TFP elasticity of output | Aschauer (1989); Hall & Jones (1999) — illustrative, not a point estimate |
 | `statfi-energy` | primary energy shares | renewables **42%** of total energy consumption, 2023 | [Statistics Finland — energy supply 2023](https://stat.fi/en/publication/cln32y7ve5mem0bvzcoduq5xx) |
-| `eroi-lit` | energy return on investment | range 8–14 (society-wide) | Hall, Lambert & Balogh (2014), *Energy Policy* — literature range |
+| `eroi-lit` | energy return on investment | per-source ranges (fossil ~10–25, nuclear ~8–20, renewable ~9–22) | Hall, Lambert & Balogh (2014), *Energy Policy*; Murphy et al. — contested literature ranges |
+| `exergy-lit` | conversion efficiency | society-wide exergy efficiency ~0.3–0.5 | Ayres & Warr, *The Economic Growth Engine* (2009) |
+| `energy-output-lit` | energy–output elasticity (α) | ~0.3–0.7 | Stern (2011), *Annals NY Acad. Sci.*; Ayres & Warr — energy & growth |
+| `infra-lit` | infrastructure elasticity (β) + stock | ~0.1–0.4 | Aschauer (1989), *J. Monetary Economics* |
+| `material-lit` | material intensity & circularity | Finland circular material use rate is low (<10%) | Eurostat / Statistics Finland material flow accounts; Circle Economy |
 | `oecd-labour-share` | labour share of output | adjusted labour share ≈ 0.57–0.60 | [OECD compendium of productivity indicators 2025](https://www.oecd.org/en/publications/oecd-compendium-of-productivity-indicators-2025_b024d9e1-en.html) |
 | `oecd-earnings-disp` | within-labour pay spread | Finland earnings D9/D1 ≈ 2.5 (low) | OECD Earnings distribution database |
 | `statfi-wealth` | capital/wealth concentration | top-10% own **52%** of net wealth, 2023 | [Statistics Finland — households' assets 2023](https://stat.fi/en/publication/cm1hek7m45vlf07vxdwvayu3c) |

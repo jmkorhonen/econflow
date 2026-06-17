@@ -24,19 +24,67 @@ export const FINLAND_BASELINE: Params = {
   // --- Productive substrate ---
   // Finland GDP ≈ €270 bn / 5.6 m ≈ €48k per capita.
   perCapitaOutput: param(46_000, 52_000, 'empirical', { unit: '€/capita/year', source: 'statfi-gdp' }),
-  // 1.0 = today's Finland. The P3 physical layer and "what-if technology/infrastructure"
-  // counterfactual drive this; it scales the whole pie without touching distribution.
-  productivityMultiplier: param(0.5, 1.5, 'policy', {
+  // Technology / total-factor residual. The physical layer (below) supplies the rest of
+  // the output multiplier; both are 1.0 at the Finland baseline.
+  productivityMultiplier: param(0.6, 1.5, 'policy', {
     value: 1.0,
-    note: 'Tech + infrastructure regime. <1 = a less-built machine (smaller, more concentrated pie).',
+    note: 'Know-how / total factor productivity not captured by energy + infrastructure.',
     source: 'tfp-lit',
   }),
-  energyMix: {
-    fossil: param(0.34, 0.42, 'empirical', { unit: 'share', source: 'statfi-energy' }),
-    nuclear: param(0.16, 0.22, 'empirical', { unit: 'share', source: 'statfi-energy' }),
-    renewable: param(0.4, 0.44, 'empirical', { unit: 'share', source: 'statfi-energy' }),
+  physical: {
+    primaryEnergyIndex: param(0.6, 1.4, 'policy', {
+      value: 1.0,
+      note: 'Total primary energy per capita, index (1.0 = today). Efficiency/sufficiency lowers it.',
+      source: 'statfi-energy',
+    }),
+    // Total energy consumption 2023: renewables 42%; fossil+peat ≈ 38%, nuclear ≈ 20%.
+    energyMix: {
+      fossil: param(0.34, 0.42, 'empirical', { value: 0.38, unit: 'share', source: 'statfi-energy' }),
+      nuclear: param(0.16, 0.22, 'empirical', { value: 0.2, unit: 'share', source: 'statfi-energy' }),
+      renewable: param(0.4, 0.44, 'empirical', { value: 0.42, unit: 'share', source: 'statfi-energy' }),
+    },
+    // Society-wide EROI is contested; broad literature ranges, not point estimates.
+    eroi: {
+      fossil: param(10, 25, 'empirical', { value: 17, unit: 'ratio', source: 'eroi-lit' }),
+      nuclear: param(8, 20, 'empirical', { value: 14, unit: 'ratio', source: 'eroi-lit' }),
+      renewable: param(9, 22, 'empirical', { value: 15, unit: 'ratio', source: 'eroi-lit' }),
+    },
+    conversionEfficiency: param(0.3, 0.5, 'empirical', {
+      value: 0.4,
+      note: 'Useful work ÷ net primary energy (society-wide exergy efficiency).',
+      source: 'exergy-lit',
+    }),
+    infrastructure: param(0.5, 1.5, 'policy', {
+      value: 1.0,
+      note: 'Social overhead capital (roads, grid, schools, courts), index. <1 = a less-built machine.',
+      source: 'infra-lit',
+    }),
+    energyElasticity: param(0.3, 0.7, 'empirical', {
+      value: 0.5,
+      note: 'α: output elasticity wrt net useful energy.',
+      source: 'energy-output-lit',
+    }),
+    infraElasticity: param(0.1, 0.4, 'empirical', {
+      value: 0.25,
+      note: 'β: output elasticity wrt public infrastructure (Aschauer-type).',
+      source: 'infra-lit',
+    }),
+    emissionFactorFossil: param(2.3, 2.9, 'empirical', {
+      value: 2.63,
+      note: 'CO₂ per unit fossil primary energy; baseline emissions index ≈ 1.0 (~7 tCO₂/capita).',
+      source: 'statfi-energy',
+    }),
+    materialIntensity: param(0.6, 1.4, 'policy', {
+      value: 1.0,
+      note: 'Material throughput per unit output, index. Efficiency/dematerialisation lowers it.',
+      source: 'material-lit',
+    }),
+    recyclingRate: param(0.05, 0.4, 'policy', {
+      value: 0.15,
+      note: 'Share of throughput met from recycled stock (circular material use; Finland is low).',
+      source: 'material-lit',
+    }),
   },
-  eroi: param(8, 14, 'empirical', { unit: 'ratio', source: 'eroi-lit' }),
 
   // --- Distribution layer ---
   wageShare: param(0.55, 0.61, 'empirical', { unit: 'labour share of output', source: 'oecd-labour-share' }),

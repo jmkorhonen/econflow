@@ -1,5 +1,6 @@
 <script lang="ts">
   import { runEconomy, evaluatePerson } from '../engine/economy';
+  import { computePhysical } from '../engine/physical';
   import { FINLAND_BASELINE } from '../data/finland-baseline';
   import type { Params } from '../engine/types';
   import Sankey from './lib/Sankey.svelte';
@@ -9,9 +10,16 @@
   import Person from './lib/Person.svelte';
   import ChartCard from './lib/ChartCard.svelte';
 
-  // Real policy levers over a (mostly) fixed pie. The productivity multiplier is the
-  // one lever that changes the pie's *size* — a preview of the P3 physical layer.
-  let productivityMultiplier = $state(FINLAND_BASELINE.productivityMultiplier.value);
+  // Physical-economy levers (set the pie's *size* via energy + infrastructure).
+  let technology = $state(FINLAND_BASELINE.productivityMultiplier.value);
+  let primaryEnergy = $state(FINLAND_BASELINE.physical.primaryEnergyIndex.value);
+  let fossilShare = $state(FINLAND_BASELINE.physical.energyMix.fossil.value);
+  let infrastructure = $state(FINLAND_BASELINE.physical.infrastructure.value);
+  let materialIntensity = $state(FINLAND_BASELINE.physical.materialIntensity.value);
+  let recyclingRate = $state(FINLAND_BASELINE.physical.recyclingRate.value);
+  const NUCLEAR = FINLAND_BASELINE.physical.energyMix.nuclear.value; // held fixed; fossil ⇄ renewable
+
+  // Rules levers (set how the pie is *divided*).
   let wageShare = $state(FINLAND_BASELINE.wageShare.value);
   let taxLevel = $state(FINLAND_BASELINE.taxLevel.value);
   let taxProgressivity = $state(FINLAND_BASELINE.taxProgressivity.value);
@@ -22,7 +30,13 @@
 
   const params = $derived.by<Params>(() => {
     const p = structuredClone(FINLAND_BASELINE);
-    p.productivityMultiplier.value = productivityMultiplier;
+    p.productivityMultiplier.value = technology;
+    p.physical.primaryEnergyIndex.value = primaryEnergy;
+    p.physical.energyMix.fossil.value = fossilShare;
+    p.physical.energyMix.renewable.value = Math.max(0, 1 - NUCLEAR - fossilShare);
+    p.physical.infrastructure.value = infrastructure;
+    p.physical.materialIntensity.value = materialIntensity;
+    p.physical.recyclingRate.value = recyclingRate;
     p.wageShare.value = wageShare;
     p.taxLevel.value = taxLevel;
     p.taxProgressivity.value = taxProgressivity;
@@ -33,6 +47,7 @@
   });
 
   const year = $derived(runEconomy({ seed, params }).years[0]);
+  const basePhysical = computePhysical(FINLAND_BASELINE); // for relative-to-baseline readouts
 
   // "You" — input your own income; runs through the same wedge, placed in the distribution.
   let myWage = $state(38_400); // €3,200 / month
@@ -59,7 +74,12 @@
   };
 
   function reset() {
-    productivityMultiplier = FINLAND_BASELINE.productivityMultiplier.value;
+    technology = FINLAND_BASELINE.productivityMultiplier.value;
+    primaryEnergy = FINLAND_BASELINE.physical.primaryEnergyIndex.value;
+    fossilShare = FINLAND_BASELINE.physical.energyMix.fossil.value;
+    infrastructure = FINLAND_BASELINE.physical.infrastructure.value;
+    materialIntensity = FINLAND_BASELINE.physical.materialIntensity.value;
+    recyclingRate = FINLAND_BASELINE.physical.recyclingRate.value;
     wageShare = FINLAND_BASELINE.wageShare.value;
     taxLevel = FINLAND_BASELINE.taxLevel.value;
     taxProgressivity = FINLAND_BASELINE.taxProgressivity.value;
@@ -70,7 +90,7 @@
 </script>
 
 <main>
-  <span class="phase-badge">Phase 2.5 · make it yours</span>
+  <span class="phase-badge">Phase 3 · the physical economy</span>
   <h1>Econflow</h1>
   <p class="tagline">There is no income before institutions.</p>
 
@@ -122,12 +142,42 @@
   <section>
     <h2>Change the machine — same effort, different income</h2>
     <div class="panel">
+      <h3 class="levergroup">Physical economy — sets the <em>size</em> of the pie</h3>
       <div class="levers">
         <label class="lever">
-          <span class="top"><span>The machine (tech + infrastructure)</span><span class="v">{productivityMultiplier.toFixed(2)}×</span></span>
-          <input type="range" min="0.5" max="1.5" step="0.01" bind:value={productivityMultiplier} />
+          <span class="top"><span>Technology / know-how</span><span class="v">{technology.toFixed(2)}×</span></span>
+          <input type="range" min="0.6" max="1.5" step="0.01" bind:value={technology} />
+          <span class="ends"><span>less</span><span>more</span></span>
+        </label>
+        <label class="lever">
+          <span class="top"><span>Primary energy per capita</span><span class="v">{primaryEnergy.toFixed(2)}×</span></span>
+          <input type="range" min="0.6" max="1.4" step="0.01" bind:value={primaryEnergy} />
+          <span class="ends"><span>less</span><span>more</span></span>
+        </label>
+        <label class="lever">
+          <span class="top"><span>Energy mix</span><span class="v">{pct(Math.max(0, 1 - NUCLEAR - fossilShare))} renewable</span></span>
+          <input type="range" min="0.0" max={1 - NUCLEAR} step="0.005" bind:value={fossilShare} />
+          <span class="ends"><span>more renewable</span><span>more fossil</span></span>
+        </label>
+        <label class="lever">
+          <span class="top"><span>Infrastructure</span><span class="v">{infrastructure.toFixed(2)}×</span></span>
+          <input type="range" min="0.5" max="1.5" step="0.01" bind:value={infrastructure} />
           <span class="ends"><span>less built</span><span>more built</span></span>
         </label>
+        <label class="lever">
+          <span class="top"><span>Material intensity</span><span class="v">{materialIntensity.toFixed(2)}×</span></span>
+          <input type="range" min="0.6" max="1.4" step="0.01" bind:value={materialIntensity} />
+          <span class="ends"><span>lean</span><span>wasteful</span></span>
+        </label>
+        <label class="lever">
+          <span class="top"><span>Recycling rate</span><span class="v">{pct(recyclingRate)}</span></span>
+          <input type="range" min="0.05" max="0.6" step="0.01" bind:value={recyclingRate} />
+          <span class="ends"><span>linear</span><span>circular</span></span>
+        </label>
+      </div>
+
+      <h3 class="levergroup">Rules — set how the pie is <em>divided</em></h3>
+      <div class="levers">
         <label class="lever">
           <span class="top"><span>Wage share of output</span><span class="v">{pct(wageShare)}</span></span>
           <input type="range" min="0.45" max="0.70" step="0.005" bind:value={wageShare} />
@@ -160,9 +210,36 @@
         </label>
       </div>
       <p class="note">
-        Only the machine lever changes the pie's <em>size</em>; the rest only change how it's
+        Physical levers change the pie's <em>size</em>; rules only change how it's
         <em>divided</em>. <button onclick={reset} style="margin-left:.4rem">reset to Finland</button>
       </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Where the wealth actually comes from</h2>
+    <p class="note" style="margin-top:0">
+      Output isn't conjured by rules — it's energy and materials turned into useful work, on top
+      of inherited infrastructure. Net energy lost to low EROI, a less-built machine, or simply
+      using less energy all shrink the pie the rules then divide.
+    </p>
+    <div class="phys-metrics">
+      <div class="pm"><span class="k">Output multiplier</span><span class="val">{year.physical.productivityFactor.toFixed(2)}×</span></div>
+      <div class="pm"><span class="k">Useful energy</span><span class="val">{(year.physical.usefulWork / basePhysical.usefulWork).toFixed(2)}×</span></div>
+      <div class="pm"><span class="k">Blended EROI</span><span class="val">{year.physical.eroiBlended.toFixed(1)}</span></div>
+      <div class="pm"><span class="k">Renewable share</span><span class="val">{pct(year.physical.renewableShare)}</span></div>
+      <div class="pm"><span class="k">CO₂ emissions</span><span class="val">{(year.physical.emissions / basePhysical.emissions).toFixed(2)}×</span></div>
+      <div class="pm"><span class="k">Recycled material</span><span class="val">{pct(year.physical.materials.recycled / year.physical.materials.throughput)}</span></div>
+    </div>
+    <ChartCard title="Energy flows" filename="econflow-energy">
+      <Sankey links={year.flows.physical} />
+    </ChartCard>
+    <div class="legend">
+      <span><span class="swatch" style="background:var(--tax)"></span>fossil</span>
+      <span><span class="swatch" style="background:var(--public)"></span>nuclear</span>
+      <span><span class="swatch" style="background:var(--social)"></span>renewable</span>
+      <span><span class="swatch" style="background:var(--labor)"></span>useful work</span>
+      <span><span class="swatch" style="background:var(--muted)"></span>EROI + conversion losses</span>
     </div>
   </section>
 

@@ -80,6 +80,13 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .lever .ends { display: flex; justify-content: space-between; color: var(--muted); font-size: 0.7rem; }
 
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 1.25rem; }
+.levergroup { font-size: 0.82rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 0.75rem; }
+.levergroup:not(:first-child) { margin-top: 1.5rem; border-top: 1px solid var(--line); padding-top: 1.25rem; }
+.levergroup em { color: var(--accent); font-style: normal; }
+.phys-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.6rem; margin-bottom: 1rem; }
+.phys-metrics .pm { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 0.6rem 0.8rem; display: flex; flex-direction: column; gap: 0.15rem; }
+.phys-metrics .k { color: var(--muted); font-size: 0.72rem; }
+.phys-metrics .val { font-size: 1.2rem; font-weight: 600; font-variant-numeric: tabular-nums; }
 .legend { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; font-size: 0.78rem; color: var(--muted); margin-top: 0.5rem; }
 .legend span { display: inline-flex; align-items: center; gap: 0.35rem; }
 .swatch { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
