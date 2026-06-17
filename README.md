@@ -2,6 +2,8 @@
 
 > There is no income before institutions.
 
+**▶ Live: https://jmkorhonen.github.io/econflow/**
+
 An educational, browser-based model showing two coupled things:
 
 1. **Distribution** — the same physical output and the same effort yield very
