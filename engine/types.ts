@@ -120,18 +120,41 @@ export interface Metrics {
   medianTaxWedge: number;
 }
 
-/** Share of a total captured by each of ten deciles (index 0 = poorest). */
-export type DecileShares = number[];
+/** Per-decile shares plus the income range (€ lo–hi) that defines each decile. */
+export interface DecileBreakdown {
+  shares: number[]; // index 0 = poorest decile; sums to 1
+  edges: { lo: number; hi: number }[]; // income bounds of each decile, for tooltips
+}
 
 export interface Distribution {
-  /** Decile shares of market income, disposable income, and capability. */
-  market: DecileShares;
-  disposable: DecileShares;
-  capability: DecileShares;
-  /** Top-fractile shares of disposable income. */
+  /** Decile breakdowns of market income, disposable income, and capability (adults only). */
+  market: DecileBreakdown;
+  disposable: DecileBreakdown;
+  capability: DecileBreakdown;
+  /** Top-fractile shares of disposable income (subsets of the top decile). */
   top10: number;
   top1: number;
   top01: number;
+}
+
+/** Result of running a user's own income through the same wedge as the synthetic population. */
+export interface PersonResult {
+  grossWage: number;
+  capitalIncome: number;
+  totalLabourCost: number;
+  disposable: number;
+  savings: number;
+  vatPaid: number;
+  realConsumption: number;
+  socialWage: number;
+  capability: number;
+  /** OECD-style labour tax wedge for this person. */
+  taxWedge: number;
+  /** 1–10, by disposable income against the adult population. */
+  decile: number;
+  /** 0–100 percentile by disposable income. */
+  percentile: number;
+  wedge: Wedge;
 }
 
 /** A single euro-slice of the median worker's labour-cost → capability wedge. */

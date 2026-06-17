@@ -1,11 +1,13 @@
 <script lang="ts">
-  import { runEconomy } from '../engine/economy';
+  import { runEconomy, evaluatePerson } from '../engine/economy';
   import { FINLAND_BASELINE } from '../data/finland-baseline';
   import type { Params } from '../engine/types';
   import Sankey from './lib/Sankey.svelte';
   import Waterfall from './lib/Waterfall.svelte';
   import Wedge from './lib/Wedge.svelte';
   import DecileBars from './lib/DecileBars.svelte';
+  import Person from './lib/Person.svelte';
+  import ChartCard from './lib/ChartCard.svelte';
 
   // Real policy levers over a (mostly) fixed pie. The productivity multiplier is the
   // one lever that changes the pie's *size* — a preview of the P3 physical layer.
@@ -32,8 +34,29 @@
 
   const year = $derived(runEconomy({ seed, params }).years[0]);
 
+  // "You" — input your own income; runs through the same wedge, placed in the distribution.
+  let myWage = $state(38_000);
+  let myCapital = $state(0);
+  let meEnabled = $state(false);
+  const person = $derived(meEnabled ? evaluatePerson(year, params, myWage, myCapital) : null);
+
   const eur = (v: number) => new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(v);
   const pct = (v: number) => (v * 100).toFixed(1) + '%';
+
+  // CSV builders for the export buttons.
+  const decileCsv = () => {
+    const rows: (string | number)[][] = [['metric', 'decile', 'share', 'income_lo', 'income_hi']];
+    for (const m of ['market', 'disposable', 'capability'] as const) {
+      const b = year.distribution[m];
+      b.shares.forEach((s, i) => rows.push([m, `D${i + 1}`, s, b.edges[i].lo, b.edges[i].hi]));
+    }
+    return rows;
+  };
+  const wedgeCsv = () => {
+    const rows: (string | number)[][] = [['slice', 'kind', 'euro']];
+    for (const s of year.wedge.slices) rows.push([s.label, s.kind, Math.round(s.amount)]);
+    return rows;
+  };
 
   function reset() {
     productivityMultiplier = FINLAND_BASELINE.productivityMultiplier.value;
@@ -47,7 +70,7 @@
 </script>
 
 <main>
-  <span class="phase-badge">Phase 2 · the tax wedge</span>
+  <span class="phase-badge">Phase 2.5 · make it yours</span>
   <h1>Econflow</h1>
   <p class="tagline">There is no income before institutions.</p>
 
@@ -74,13 +97,26 @@
   </div>
 
   <section>
+    <h2>This is about you</h2>
+    <p class="note" style="margin-top:0">
+      Enter your own income to see where you land, what your wedge looks like, and how the
+      levers below move <em>your</em> number.
+    </p>
+    <div class="panel">
+      <Person bind:grossWage={myWage} bind:capitalIncome={myCapital} bind:enabled={meEnabled} {person} />
+    </div>
+  </section>
+
+  <section>
     <h2>Your “gross wage” is a line we chose to draw</h2>
     <p class="note" style="margin-top:0">
       The median worker, from what they cost their employer to what they can actually consume.
       Every euro the public takes — employer contributions, income tax, VAT — is one wedge.
       How it's <em>labelled</em> is a political choice; the real outcome is not.
     </p>
-    <div class="panel"><Wedge wedge={year.wedge} /></div>
+    <ChartCard title="The median worker's tax wedge" filename="econflow-wedge" csv={wedgeCsv}>
+      <Wedge wedge={year.wedge} />
+    </ChartCard>
   </section>
 
   <section>
@@ -132,17 +168,23 @@
 
   <section>
     <h2>Who gets the GDP?</h2>
-    <div class="panel"><DecileBars distribution={year.distribution} /></div>
+    <ChartCard title="Distribution by decile" filename="econflow-deciles" csv={decileCsv}>
+      <DecileBars distribution={year.distribution} userDecile={person?.decile ?? null} />
+    </ChartCard>
   </section>
 
   <section>
     <h2>Where did your income come from?</h2>
-    <Waterfall decomposition={year.representative} />
+    <ChartCard title="Median worker income decomposition" filename="econflow-waterfall">
+      <Waterfall decomposition={year.representative} />
+    </ChartCard>
   </section>
 
   <section>
     <h2>The whole machine — money flows</h2>
-    <Sankey links={year.flows.money} />
+    <ChartCard title="Money flows" filename="econflow-sankey">
+      <Sankey links={year.flows.money} />
+    </ChartCard>
     <div class="legend">
       <span><span class="swatch" style="background:var(--labor)"></span>labour / households</span>
       <span><span class="swatch" style="background:var(--capital)"></span>capital</span>

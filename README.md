@@ -34,6 +34,7 @@ Runs entirely in the browser (no server, no cost) and deploys to GitHub Pages.
 | **P0** | Scaffold: range-based engine skeleton, tests, Pages auto-deploy ✓ |
 | **P1** | Distribution + progressive fiscal engine, Finland baseline, money Sankey, income waterfall ✓ |
 | **P2** | Tax wedge (labour cost → consumption) + relabel demo, named policy levers, ~10k agents + Pareto top tail, decile / top-fractile views ✓ |
+| **P2.5** | "You" panel (your income → your wedge & decile placement), decile-chart polish (income-range tooltips, top-1%/0.1% zoom), PNG/CSV export ✓ |
 | **P3** | Physical layer (energy/materials/EROI/emissions) + physical Sankey, driving the productivity multiplier |
 | **P4** | Dynamics & political economy: r>g, inheritance, the cross-regime "merit-held-constant" avatar, intergenerational mobility, wealth→power capture loop |
 | **P5** | Scenarios + side-by-side compare ("another Finland / another era"), uncertainty bands, accessibility, share/embed |

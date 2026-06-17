@@ -1,6 +1,7 @@
 // tests/engine.test.ts
 import { describe, it, expect } from 'vitest';
-import { runEconomy } from '../engine/economy';
+import { runEconomy, evaluatePerson } from '../engine/economy';
+import { FINLAND_BASELINE } from '../data/finland-baseline';
 import { gini, topShare, median } from '../engine/metrics';
 import { param, exact, midpoint } from '../engine/param';
 
@@ -115,15 +116,35 @@ describe('runEconomy', () => {
   });
 
   it('decile shares of capability sum to 1 and rise monotonically', () => {
-    const d = runEconomy({ seed: 5 }).years[0].distribution.capability;
+    const d = runEconomy({ seed: 5 }).years[0].distribution.capability.shares;
     expect(d.reduce((s, v) => s + v, 0)).toBeCloseTo(1, 5);
     for (let i = 1; i < d.length; i++) expect(d[i]).toBeGreaterThanOrEqual(d[i - 1]);
+  });
+
+  it('decile edges are ascending and bound each decile', () => {
+    const e = runEconomy({ seed: 5 }).years[0].distribution.disposable.edges;
+    expect(e).toHaveLength(10);
+    for (let i = 0; i < 10; i++) expect(e[i].hi).toBeGreaterThanOrEqual(e[i].lo);
+    for (let i = 1; i < 10; i++) expect(e[i].lo).toBeGreaterThanOrEqual(e[i - 1].lo);
   });
 
   it('top fractiles nest: top 0.1% ≤ top 1% ≤ top 10%', () => {
     const d = runEconomy({ seed: 5 }).years[0].distribution;
     expect(d.top01).toBeLessThanOrEqual(d.top1);
     expect(d.top1).toBeLessThanOrEqual(d.top10);
+  });
+
+  it('evaluatePerson is consistent with the engine and ranks higher incomes higher', () => {
+    const year = runEconomy({ seed: 5 }).years[0];
+    const low = evaluatePerson(year, FINLAND_BASELINE, 25_000, 0);
+    const high = evaluatePerson(year, FINLAND_BASELINE, 90_000, 40_000);
+    // wedge reconstructs labour cost; capability is positive; ordering holds.
+    const sum = low.wedge.slices.filter((s) => s.side !== 'returned').reduce((s, x) => s + x.amount, 0);
+    expect(sum).toBeCloseTo(low.wedge.totalLabourCost, 1);
+    expect(high.disposable).toBeGreaterThan(low.disposable);
+    expect(high.decile).toBeGreaterThanOrEqual(low.decile);
+    expect(high.percentile).toBeGreaterThan(low.percentile);
+    expect(low.capability).toBeGreaterThan(0);
   });
 
   it('VAT is regressive on income: the bottom spends a larger income-share on VAT', () => {

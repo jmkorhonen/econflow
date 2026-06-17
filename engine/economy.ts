@@ -13,6 +13,7 @@ import type {
   DecompositionItem,
   Distribution,
   Params,
+  PersonResult,
   PhysicalState,
   SankeyLink,
   SimResult,
@@ -26,7 +27,7 @@ import { makeRng, type Rng } from './rng';
 import { allocateLabour, allocateCapital } from './distribution';
 import { labourTax, capitalTax } from './fiscal';
 import { gini, median } from './metrics';
-import { decileShares, topFractileShare } from './aggregate';
+import { decileBreakdown, decileOf, topFractileShare } from './aggregate';
 
 export interface RunOpts {
   seed?: number;
@@ -72,18 +73,10 @@ function simulateYear(year: number, p: Params, rng: Rng): YearState {
   allocateCapital(citizens, capitalPool, p.capitalParetoAlpha.value, rng);
 
   // 3. The wedge, part 1: employer/employee contributions, income tax, capital tax.
-  const eRate = p.employerContribRate.value;
-  const emRate = p.employeeContribRate.value;
   let labourSideTake = 0; // employer + employee + income tax
   let capitalTaxTotal = 0;
   for (const c of citizens) {
-    c.grossWage = c.totalLabourCost / (1 + eRate);
-    c.employerContrib = c.totalLabourCost - c.grossWage;
-    c.employeeContrib = c.grossWage * emRate;
-    const taxable = c.grossWage - c.employeeContrib;
-    c.incomeTax = labourTax(taxable, p.taxLevel.value, p.taxProgressivity.value);
-    c.capitalTax = capitalTax(c.capitalIncome, p.capitalTaxRate.value);
-    c.laborIncome = c.grossWage;
+    applyTaxes(c, p);
     labourSideTake += c.employerContrib + c.employeeContrib + c.incomeTax;
     capitalTaxTotal += c.capitalTax;
   }
@@ -107,18 +100,9 @@ function simulateYear(year: number, p: Params, rng: Rng): YearState {
 
   // 5. Savings rise with income → VAT bites the bottom harder. Needs the median first.
   const medDisposable = median(citizens.map((c) => c.disposable).filter((v) => v > 0)) || 1;
-  const vatRate = p.vatRate.value;
   let vatTotal = 0;
   for (const c of citizens) {
-    const rel = c.disposable / medDisposable - 1;
-    const sRate = clamp(p.savingsRateBase.value + p.savingsRateSlope.value * rel, 0, 0.6);
-    const spendable = Math.max(0, c.disposable);
-    c.savings = spendable * sRate;
-    const expenditure = spendable - c.savings;
-    c.housingCost = expenditure * p.housingCostFraction.value; // VAT-exempt rent
-    const vatable = expenditure - c.housingCost;
-    c.vatPaid = vatable * (vatRate / (1 + vatRate));
-    c.realConsumption = expenditure - c.vatPaid; // housing + goods actually obtained
+    applyConsumption(c, p, medDisposable);
     vatTotal += c.vatPaid;
   }
 
@@ -215,15 +199,42 @@ function computeMetrics(citizens: Citizen[], output: number, totalBudget: number
 }
 
 function computeDistribution(citizens: Citizen[]): Distribution {
-  const disposable = citizens.map((c) => Math.max(0, c.disposable));
+  // Distribution among the adult population (children are not income units).
+  const adults = citizens.filter((c) => c.class !== 'child');
+  const disposable = adults.map((c) => Math.max(0, c.disposable));
   return {
-    market: decileShares(citizens.map((c) => Math.max(0, c.grossWage + c.capitalIncome))),
-    disposable: decileShares(disposable),
-    capability: decileShares(citizens.map((c) => Math.max(0, c.capability))),
+    market: decileBreakdown(adults.map((c) => Math.max(0, c.grossWage + c.capitalIncome))),
+    disposable: decileBreakdown(disposable),
+    capability: decileBreakdown(adults.map((c) => Math.max(0, c.capability))),
     top10: topFractileShare(disposable, 0.1),
     top1: topFractileShare(disposable, 0.01),
     top01: topFractileShare(disposable, 0.001),
   };
+}
+
+/** Apply the contribution/tax stage to a citizen whose totalLabourCost (and capitalIncome) are set. */
+function applyTaxes(c: Citizen, p: Params): void {
+  const eRate = p.employerContribRate.value;
+  c.grossWage = c.totalLabourCost / (1 + eRate);
+  c.employerContrib = c.totalLabourCost - c.grossWage;
+  c.employeeContrib = c.grossWage * p.employeeContribRate.value;
+  const taxable = c.grossWage - c.employeeContrib;
+  c.incomeTax = labourTax(taxable, p.taxLevel.value, p.taxProgressivity.value);
+  c.capitalTax = capitalTax(c.capitalIncome, p.capitalTaxRate.value);
+  c.laborIncome = c.grossWage;
+}
+
+/** Apply the savings/VAT/consumption stage to a citizen whose disposable is set. */
+function applyConsumption(c: Citizen, p: Params, medDisposable: number): void {
+  const rel = c.disposable / medDisposable - 1;
+  const sRate = clamp(p.savingsRateBase.value + p.savingsRateSlope.value * rel, 0, 0.6);
+  const spendable = Math.max(0, c.disposable);
+  c.savings = spendable * sRate;
+  const expenditure = spendable - c.savings;
+  c.housingCost = expenditure * p.housingCostFraction.value; // VAT-exempt rent
+  const vatable = expenditure - c.housingCost;
+  c.vatPaid = vatable * (p.vatRate.value / (1 + p.vatRate.value));
+  c.realConsumption = expenditure - c.vatPaid; // housing + goods actually obtained
 }
 
 /** The median-grossWage worker, decomposed into the sources of their capability. */
@@ -246,9 +257,12 @@ function medianWorker(citizens: Citizen[]): Citizen {
   return workers[Math.floor(workers.length / 2)] ?? citizens[0];
 }
 
-/** The median worker's full labour-cost → capability wedge (drives the relabel demo). */
 function medianWedge(citizens: Citizen[]): Wedge {
-  const c = medianWorker(citizens);
+  return wedgeForCitizen(medianWorker(citizens));
+}
+
+/** A citizen's full labour-cost → capability wedge (drives the relabel demo). */
+function wedgeForCitizen(c: Citizen): Wedge {
   const takeHome = c.savings + (c.realConsumption - c.housingCost) + c.housingCost; // = expenditure + savings
   const slices: WedgeSlice[] = [
     { label: 'Employer contributions', amount: c.employerContrib, kind: 'employer_contrib', side: 'above_gross' },
@@ -307,6 +321,52 @@ function moneySankey(f: FlowInputs): SankeyLink[] {
     { source: 'Public services', target: 'Real capability', value: f.socialWageBudget },
   ];
   return links.filter((l) => l.value > 0);
+}
+
+/**
+ * Run a user's own income through the *same* wedge as the synthetic population,
+ * and locate them in the adult disposable-income distribution. Pure and
+ * client-side — the income never leaves the function.
+ */
+export function evaluatePerson(
+  year: YearState,
+  p: Params,
+  grossWage: number,
+  capitalIncome: number,
+): PersonResult {
+  const socialWagePerCapita = year.citizens[0]?.socialWageReceived ?? 0;
+  const medDisposable = median(year.citizens.map((c) => c.disposable).filter((v) => v > 0)) || 1;
+
+  const c = blankCitizen(-1, 'worker', 0.5);
+  c.totalLabourCost = Math.max(0, grossWage) * (1 + p.employerContribRate.value);
+  c.capitalIncome = Math.max(0, capitalIncome);
+  applyTaxes(c, p);
+  c.disposable = c.grossWage - c.employeeContrib - c.incomeTax + c.capitalIncome - c.capitalTax;
+  applyConsumption(c, p, medDisposable);
+  c.socialWageReceived = socialWagePerCapita;
+  c.capability = c.realConsumption + c.socialWageReceived;
+
+  const adultDisp = year.citizens
+    .filter((x) => x.class !== 'child')
+    .map((x) => Math.max(0, x.disposable))
+    .sort((a, b) => a - b);
+  const below = adultDisp.filter((v) => v <= c.disposable).length;
+  const w = wedgeForCitizen(c);
+  return {
+    grossWage: c.grossWage,
+    capitalIncome: c.capitalIncome,
+    totalLabourCost: c.totalLabourCost,
+    disposable: c.disposable,
+    savings: c.savings,
+    vatPaid: c.vatPaid,
+    realConsumption: c.realConsumption,
+    socialWage: c.socialWageReceived,
+    capability: c.capability,
+    taxWedge: w.totalLabourCost > 0 ? w.labourSideTake / w.totalLabourCost : 0,
+    decile: decileOf(adultDisp, Math.max(0, c.disposable)),
+    percentile: adultDisp.length ? (below / adultDisp.length) * 100 : 0,
+    wedge: w,
+  };
 }
 
 function physicalStub(p: Params, output: number): PhysicalState {
